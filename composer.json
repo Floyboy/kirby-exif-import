@@ -1,0 +1,43 @@
+{
+  "name": "hnzio/kirby-exif-import",
+  "description": "Kirby plugin for importing EXIF, IPTC and GPS metadata into image files and page fields.",
+  "type": "kirby-plugin",
+  "license": "MIT",
+  "homepage": "https://github.com/hnzio/kirby-exif-import",
+  "support": {
+    "docs": "https://github.com/hnzio/kirby-exif-import/blob/main/README.md",
+    "source": "https://github.com/hnzio/kirby-exif-import"
+  },
+  "authors": [
+    {
+      "name": "hnzio"
+    }
+  ],
+  "keywords": [
+    "kirby",
+    "kirby-cms",
+    "kirby-plugin",
+    "exif",
+    "iptc",
+    "gps",
+    "images",
+    "metadata"
+  ],
+  "require": {
+    "php": ">=8.1",
+    "ext-mbstring": "*",
+    "getkirby/composer-installer": "^1.2"
+  },
+  "suggest": {
+    "ext-exif": "Recommended for reading embedded EXIF metadata."
+  },
+  "require-dev": {
+    "getkirby/cms": "^5.0"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "allow-plugins": {
+      "getkirby/composer-installer": true
+    }
+  }
+}
