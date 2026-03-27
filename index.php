@@ -534,7 +534,10 @@ function resolveFreshFileOnPage(Page $page, File $file): ?File
  */
 function normalizeTemplate(Page $page): Page
 {
-  $p = \page($page->id());
+  $p = \page($page->id()) ?? $page;
+  if (!$p) {
+    throw new \RuntimeException('Page could not be resolved in normalizeTemplate()');
+  }
   $current  = $p->template()->name();
   $intended = $p->intendedTemplate()->name();
 
@@ -550,7 +553,7 @@ function normalizeTemplate(Page $page): Page
     }
   }
 
-  return \page($p->id()); // garantiert frische Instanz
+  return \page($p->id()) ?? $p; // frische Instanz, sonst Fallback auf vorhandenes Objekt
 }
 
 /**
