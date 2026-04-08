@@ -39,6 +39,84 @@ if (function_exists(__NAMESPACE__ . '\\exifOption') === false) {
 
 Kirby::plugin('hnzio/exif-import', [
   'options' => pluginOptions(),
+  'fields' => [
+    'exif-reload' => [
+      'props' => [
+        'buttonLabel' => fn ($value = 'EXIF neu laden') => (string)$value,
+        'theme' => fn ($value = 'positive') => (string)$value,
+      ],
+    ],
+  ],
+  'panel' => [
+    'js' => 'index.js',
+  ],
+  'api' => [
+    'routes' => [
+      [
+        'pattern' => 'exif-import/reload',
+        'method' => 'POST',
+        'action' => function () {
+          if (!\kirby()->user()) {
+            return ['ok' => false, 'status' => 'err-auth', 'message' => 'Nicht eingeloggt.'];
+          }
+
+          $data = \kirby()->request()->data();
+          $pageId = trim((string)($data['pageId'] ?? $data['page'] ?? ''));
+          $fileId = trim((string)($data['filename'] ?? $data['file'] ?? ''));
+          $fileUuid = trim((string)($data['fileUuid'] ?? ''));
+
+          $page = $pageId !== '' ? \page($pageId) : null;
+          $file = null;
+
+          if ($page && $fileId !== '') {
+            $file = $page->file($fileId)
+              ?? $page->files()->findBy('filename', $fileId)
+              ?? $page->files()->findBy('id', $fileId)
+              ?? $page->files()->findBy('uuid', $fileId);
+          }
+
+          if (!$file && $fileUuid !== '') {
+            try {
+              $file = \kirby()->file($fileUuid);
+            } catch (\Throwable) {
+              $file = null;
+            }
+            $page = $file?->page() ?? $page;
+          }
+
+          if (!$page) {
+            return ['ok' => false, 'status' => 'err-page', 'message' => 'Seite nicht gefunden.'];
+          }
+
+          if (!$file) {
+            return ['ok' => false, 'status' => 'err-file', 'message' => 'Datei nicht gefunden.'];
+          }
+
+          if ($file->type() !== 'image') {
+            return ['ok' => false, 'status' => 'err-type', 'message' => 'Die Datei ist kein Bild.'];
+          }
+
+          try {
+            $stats = null;
+            exifImportForPage($page, $file, true, false, $stats, true);
+            if (($stats['changed'] ?? false) !== true) {
+              return ['ok' => false, 'status' => 'err-noexif', 'message' => 'Keine EXIF-Daten übernommen.'];
+            }
+
+            return [
+              'ok' => true,
+              'status' => 'ok',
+              'message' => 'EXIF-Daten wurden neu eingelesen.',
+              'stats' => $stats,
+            ];
+          } catch (\Throwable $e) {
+            error_log('[Exif-Import] Fehler manual API route: ' . $e->getMessage());
+            return ['ok' => false, 'status' => 'err-run', 'message' => 'EXIF-Import fehlgeschlagen: ' . $e->getMessage()];
+          }
+        }
+      ]
+    ]
+  ],
   'hooks' => [
     // Upload nie blockieren: bei fehlenden GPS-Daten nur Hinweis loggen
     'file.create:before' => function (...$args) {
