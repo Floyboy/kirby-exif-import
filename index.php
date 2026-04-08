@@ -589,7 +589,11 @@ function exifImportForPage(
       \kirby()->impersonate('kirby');
       try {
         Guard::lock('page.update');
-        \page($page->id())->update(['ExifImport' => 'false']);
+        try {
+          \page($page->id())->update(['ExifImport' => 'false']);
+        } catch (\Throwable $e) {
+          error_log('[Exif-Import] Warnung: ExifImport-Toggle konnte nicht geschrieben werden: ' . $e->getMessage());
+        }
       } finally {
         Guard::unlock('page.update');
         \kirby()->impersonate(null);
@@ -686,12 +690,16 @@ function exifImportForPage(
     \kirby()->impersonate('kirby');
     try {
       Guard::lock('page.update');
-      $fresh = \page($page->id());           // frische Instanz holen
-      $fresh = $fresh->update($pageUpdate);  // neue Page-Instanz übernehmen
+      try {
+        $fresh = \page($page->id());           // frische Instanz holen
+        $fresh = $fresh->update($pageUpdate);  // neue Page-Instanz übernehmen
 
-      error_log('[Exif-Import] Seite gespiegelt aus Titelbild: ' . json_encode($pageUpdate) . ' → ' . $fresh->id());
-      $page = $fresh; // aktualisierte Seite weiterreichen
-      $pageUpdated = true;
+        error_log('[Exif-Import] Seite gespiegelt aus Titelbild: ' . json_encode($pageUpdate) . ' → ' . $fresh->id());
+        $page = $fresh; // aktualisierte Seite weiterreichen
+        $pageUpdated = true;
+      } catch (\Throwable $e) {
+        error_log('[Exif-Import] Warnung: Seiten-Mirror konnte nicht geschrieben werden: ' . $e->getMessage() . ' → ' . $page->id());
+      }
     } finally {
       Guard::unlock('page.update');
       \kirby()->impersonate(null);
