@@ -595,15 +595,57 @@ function resolveTitleImage(Page $page): ?File
 
 function resolveFreshFileOnPage(Page $page, File $file): ?File
 {
-  $freshPage = \page($page->id());
-  if (!$freshPage) {
-    return null;
+  $uuid = $file->uuid()?->toString();
+  $filename = $file->filename();
+  $root = $file->root();
+  $freshPage = \page($page->id()) ?? $page;
+
+  if ($freshPage) {
+    $candidates = [
+      $freshPage->file($filename),
+      $freshPage->files()->findBy('id', $file->id()),
+      $uuid ? $freshPage->files()->findBy('uuid', $uuid) : null,
+      $freshPage->images()->findBy('filename', $filename),
+      $root ? $freshPage->files()->findBy('root', $root) : null,
+    ];
+
+    foreach ($candidates as $candidate) {
+      if ($candidate instanceof File) {
+        return $candidate;
+      }
+    }
+
+    foreach ($freshPage->files() as $candidate) {
+      if (!$candidate instanceof File) {
+        continue;
+      }
+
+      if (
+        $candidate->filename() === $filename ||
+        ($root && $candidate->root() === $root) ||
+        ($uuid && $candidate->uuid()?->toString() === $uuid)
+      ) {
+        return $candidate;
+      }
+    }
   }
 
-  return $freshPage->file($file->filename())
-    ?? $freshPage->files()->findBy('id', $file->id())
-    ?? $freshPage->files()->findBy('uuid', $file->uuid()?->toString())
-    ?? $freshPage->images()->findBy('filename', $file->filename());
+  if ($uuid) {
+    try {
+      $globalFile = \kirby()->file($uuid);
+      if ($globalFile instanceof File) {
+        return $globalFile;
+      }
+    } catch (\Throwable) {
+      // ignore
+    }
+  }
+
+  if ($root && is_file($root)) {
+    return $file;
+  }
+
+  return null;
 }
 
 /**
